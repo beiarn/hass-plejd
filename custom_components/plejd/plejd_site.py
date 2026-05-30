@@ -135,7 +135,7 @@ class PlejdSite:
             async_track_time_interval(
                 self.hass,
                 self._ping,
-                self.manager.ping_interval,
+                timedelta(minutes=3),
                 name="Plejd keep-alive",
             )
         )
@@ -191,7 +191,10 @@ class PlejdSite:
         if self.stopping or not self.started:
             return
         if not await self.manager.ping():
-            _LOGGER.debug("Ping failed")
+            _LOGGER.warning("Ping failed - will retry in 30s")
+            self.hass.loop.call_later(
+                30, lambda: self.hass.async_create_task(self._ping())
+            )
 
     async def _broadcast_time(self, *_) -> None:
         """Check that the mesh clock is in sync."""
