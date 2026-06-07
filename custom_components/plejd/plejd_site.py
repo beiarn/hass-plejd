@@ -190,11 +190,17 @@ class PlejdSite:
         """Ping the plejd mesh to connect or maintain the connection."""
         if self.stopping or not self.started:
             return
-        if not await self.manager.ping():
-            _LOGGER.warning("Ping failed - will retry in 30s")
-            self.hass.loop.call_later(
-                30, lambda: self.hass.async_create_task(self._ping())
-            )
+        if getattr(self, "_ping_running", False):
+            return
+        self._ping_running = True
+        try:
+            if not await self.manager.ping():
+                _LOGGER.warning("Ping failed - will retry in 30s")
+                self.hass.loop.call_later(
+                    30, lambda: self.hass.async_create_task(self._ping())
+                )
+        finally:
+            self._ping_running = False
 
     async def _broadcast_time(self, *_) -> None:
         """Check that the mesh clock is in sync."""
